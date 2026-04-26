@@ -1,0 +1,817 @@
+jalaliDatepicker.startWatch({
+    minDate: "attr",
+    maxDate: "attr"
+});
+
+
+
+
+// lightbox.option({
+//     "resizeDuration": 200,
+//     "wrapAround": true,
+//     "imageFadeDuration": 300,
+//     "positionFromTop": 50,
+//     "showImageNumberLabel": true
+// });
+
+
+// let timerSms = 0;
+
+function startLoading() {
+    var overlay = document.getElementById("overlay");
+
+    if (overlay) {
+        overlay.style.display = "flex";
+        overlay.style.opacity = "0";
+        overlay.style.transition = "opacity 0.5s ease-in-out";
+
+        setTimeout(() => {
+            overlay.style.opacity = "1";
+        }, 10);
+    }
+
+    document.body.classList.add("no-scroll");
+}
+
+function endLoading() {
+
+    var overlay = document.getElementById("overlay");
+
+    if (overlay) {
+        overlay.style.transition = "opacity 0.5s ease-in-out";
+        overlay.style.opacity = "0";
+
+        setTimeout(() => {
+            overlay.style.display = "none";
+        }, 500);
+    }
+
+    document.body.classList.remove("no-scroll");
+
+}
+
+function incrementCounter() {
+    const counterElement = document.querySelector('.counter-number');
+    let currentNumber = parseInt(counterElement.getAttribute('data-target'));
+    currentNumber += 1;
+    counterElement.setAttribute('data-target', currentNumber);
+    counterElement.textContent = currentNumber.toLocaleString('en-US');
+}
+
+const counterNumber = document.querySelectorAll('.counter-number');
+if (counterNumber) {
+    function startCounter(element) {
+        const target = parseInt(element.getAttribute('data-target'));
+        const duration = 2000;
+        const step = Math.ceil(target / (duration / 16));
+        let current = 0;
+
+        const timer = setInterval(() => {
+            current += step;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            element.textContent = current.toLocaleString();
+        }, 16);
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                startCounter(entry.target);
+                observer.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.5
+    });
+
+
+    counterNumber.forEach(counter => {
+        observer.observe(counter);
+    });
+
+}
+
+document.querySelectorAll('.goto-btn').forEach(item => {
+    item.addEventListener('click', function () {
+        const dataBlock = this.getAttribute('data-goto');
+        const mapSection = document.getElementById(dataBlock);
+        mapSection.scrollIntoView({
+            behavior: 'smooth'
+        });
+    });
+});
+
+document.querySelectorAll('a[href^="#"]').forEach(item => {
+    item.addEventListener('click', function (event) {
+        event.preventDefault();
+
+        const targetId = this.getAttribute('href').substring(1);
+        const targetElement = document.getElementById(targetId);
+
+        if (targetElement) {
+            targetElement.scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+    });
+});
+
+function setToastAlert(message, type = 'info') {
+    const toastElement = document.getElementById('taiToast');
+    const toastBody = toastElement.querySelector('.toast-body');
+
+    const typeClasses = {
+        'success': 'text-bg-success',
+        'danger': 'text-bg-danger',
+        'warning': 'text-bg-warning',
+        'info': 'text-bg-info',
+        'primary': 'text-bg-primary'
+    };
+
+    Object.values(typeClasses).forEach(cls => {
+        toastElement.classList.remove(cls);
+    });
+
+    const bgClass = typeClasses[type];
+    toastElement.classList.add(bgClass);
+
+    toastBody.innerHTML = message;
+
+    const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toastElement);
+    toastBootstrap.show();
+}
+
+
+let interval = null;
+
+function startTimer() {
+
+    if (interval) {
+        clearInterval(interval);
+    }
+
+    let timer = extraJs.sms_timer * 60;
+
+    interval = setInterval(() => {
+
+        const minutes = String(Math.floor(timer / 60)).padStart(2, '0');
+        const seconds = String(timer % 60).padStart(2, '0');
+
+        document.getElementById('timer').textContent = `${minutes}:${seconds}`;
+
+        if (timer <= 0) {
+            clearInterval(interval);
+            document.getElementById('resendCode').disabled = false;
+            return;
+        }
+
+        timer--;
+
+    }, 1000);
+}
+
+document.getElementById('resendCode').addEventListener('click', function () {
+    sendSms();
+
+});
+
+function validateMobile(mobile) {
+    let regex = /^09\d{9}$/;
+    return regex.test(mobile);
+}
+let isSendSms = true;
+let formToken = "";
+let mobile = "";
+
+
+function sendSms() {
+    startTimer();
+    document.getElementById('resendCode').disabled = true;
+
+    if (isSendSms && formToken != "") {
+
+        let captcha = document.getElementById('captcha').value;
+        let captchaData = document.getElementById('captchaData').value;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', extraJs.ajaxUrl, true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onload = function () {
+
+            const response = JSON.parse(xhr.responseText);
+
+
+            if (xhr.status !== 200) {
+                if (response.data.error != undefined && response.data.error == "reload") {
+                    location.reload(true);
+                    return;
+                }
+            }
+
+        };
+        xhr.send(`action=sendSms&mobileNumber=${mobile}&captcha=${captcha}&captchaData=${captchaData}&formToken=${formToken}`);
+
+    }
+}
+
+function checkForm() {
+    startLoading();
+    document.getElementById('verificationCodeForm').reset();
+
+
+    formToken = document.getElementById('formToken').value;
+    mobile = document.getElementById('mobile').value;
+    let captcha = document.getElementById('captcha').value;
+    let captchaData = document.getElementById('captchaData').value;
+
+    if (formToken == "") {
+        location.reload(true);
+        return;
+    }
+
+
+    if (validateMobile(mobile)) {
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', extraJs.ajaxUrl, true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onload = function () {
+
+            const response = JSON.parse(xhr.responseText);
+
+            endLoading();
+            if (xhr.status === 200 && response.success) {
+                document.getElementById('resendCode').disabled = true;
+
+                let otpInput = document.getElementById('verificationCode');
+                otpInput.focus();
+
+                isSendSms = response.data.success
+
+                setToastAlert('پیام با موفقیت ارسال شد', 'success');
+                new bootstrap.Modal(document.getElementById('verifySmsModal')).show();
+
+                sendSms();
+
+            } else {
+
+                let textMassage = response.data.massage;
+
+                if (textMassage == undefined) {
+                    textMassage = response.data
+                }
+
+
+                setToastAlert(textMassage, "danger");
+
+                if (response.data.error != undefined && response.data.error == "reload") {
+                    location.reload(true);
+                    return;
+                }
+            }
+
+        };
+
+        xhr.send(`action=checkForm&captcha=${captcha}&mobileNumber=${mobile}&captchaData=${captchaData}&formToken=${formToken}`);
+
+    } else {
+        endLoading();
+        setToastAlert('شماره موبایل نامعتبر است', "danger");
+    }
+}
+
+
+let captchaImage = document.getElementById('captchaImage');
+
+function createdFormToken() {
+    startLoading();
+
+    let formTokenInput = document.getElementById('formToken');
+    let captchaImage = document.getElementById('captchaImage');
+    let captchaInput = document.getElementById('captcha');
+    let captchaData = document.getElementById('captchaData');
+
+
+    formToken = formTokenInput.value
+
+    if (formToken == "") {
+        location.reload(true);
+        return;
+    }
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', extraJs.ajaxUrl, true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onload = function () {
+
+        const response = JSON.parse(xhr.responseText);
+
+        if (xhr.status === 200 && response.success) {
+            document.getElementById('requestForm').reset();
+
+            let resData = response.data
+
+            formTokenInput.value = resData.formToken;
+
+            captchaData.value = resData.captcha.key;
+            captchaInput.value = resData.captcha.word;
+            captchaImage.src = resData.captcha.url;
+
+        } else {
+
+            let textMassage = response.data.massage;
+
+            if (textMassage == undefined) {
+                textMassage = response.data
+            }
+
+            setToastAlert(textMassage, "danger");
+
+            if (response.data.error != undefined && response.data.error == "reload") {
+                location.reload(true);
+                return;
+            }
+        }
+
+
+        endLoading();
+
+    };
+
+    xhr.send(`action=createdFormToken&formToken=${formToken}`);
+}
+
+
+
+const commentList = document.getElementById("commentList");
+if (commentList) {
+
+    let nextPointer = 10;
+    const moreSendMedia = document.getElementById("more_send_media");
+
+    function renderItems(data) {
+
+        data.forEach(item => {
+
+            const commentCard = document.createElement('div');
+            commentCard.className = 'd-flex flex-column bg-white rounded-3 p-12 fw-bold f-14';
+
+            commentCard.innerHTML = `
+                    <div class="d-flex flex-row justify-content-between align-items-center border-1 border-bottom pb-12 mb-12 text-black-50">
+                    <span>
+                        ${item.fullname.trim()}
+                    </span>
+                    <div class="d-flex flex-row justify-content-end align-items-center gap-1">
+                        <span class="" dir="ltr">
+                        ${item.date}
+                        </span>                        
+                        <svg style="height: 24px; width: 24px;">
+                            <use href="#calendar"></use>
+                        </svg>
+                    </div>
+                    </div>
+                    <p class="text-justify text-pre-wrap">${item.description}</p>
+                `;
+
+            commentList.appendChild(commentCard);
+        });
+
+    }
+
+    function loadMore() {
+
+        if (nextPointer == 0) return;
+        startLoading();
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", extraJs.ajaxUrl, true);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+        xhr.onload = () => {
+            if (xhr.status !== 200) {
+                setToastAlert('لطفا چند دقیقه دیگر تلاش کنید', "danger");
+                return;
+            }
+            try {
+                const res = JSON.parse(xhr.responseText);
+
+                if (!res.success) throw new Error();
+
+                nextPointer = res.data.next;
+
+                renderItems(res.data.all);
+
+                if (nextPointer == 0) {
+                    moreSendMedia.classList.add("d-none");
+                } else {
+                    moreSendMedia.classList.remove("d-none");
+                }
+            } catch {
+                setToastAlert('لطفا چند دقیقه دیگر تلاش کنید', "danger");
+            }
+
+            endLoading();
+
+        };
+
+        xhr.send(`action=getComments&pointer=${nextPointer}`);
+    }
+
+    loadMore();
+
+    moreSendMedia.addEventListener("click", loadMore);
+
+}
+
+
+if ('OTPCredential' in window) {
+    const verifyCodeButton = document.getElementById('verifyCode');
+
+    const inputVerificationCode = document.getElementById('verificationCode');
+
+    if (inputVerificationCode) {
+
+        const ac = new AbortController();
+
+        navigator.credentials
+            .get({
+                otp: {
+                    transport: ['sms'],
+                },
+                signal: ac.signal,
+            })
+            .then((otp) => {
+
+                if (otp && otp.code) {
+                    inputVerificationCode.value = otp.code;
+
+                    verifyCodeButton.click();
+
+                    verifyLogin(otp.code);
+
+
+                } else { }
+
+                ac.abort();
+            })
+            .catch((err) => {
+
+                if (ac.signal.aborted === false) {
+                    ac.abort();
+                }
+            });
+    }
+}
+
+jQuery(document).ready(function ($) {
+
+    // $("#verifySmsModal").modal("show");
+
+    $('.onlyNumbersInput').on('input paste', function () {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+
+    // $(document).on("change", "select#state", function (e) {
+
+    //     let value = $(this).val();
+
+    //     startLoading();
+
+    //     const data = {
+    //         action: 'get_cities',
+    //         state_id: Number(value),
+    //     }
+    //     $.ajax({
+    //         url: extraJs.ajaxUrl,
+    //         method: 'POST',
+    //         data: data,
+    //         dataType: 'json',
+    //         success: function (result) {
+
+    //             if (result.success && result.data) {
+    //                 $('#city').html("");
+    //                 $('#city').append($('<option>', {
+    //                     value: 0,
+    //                     text: 'شهر خود را انتخاب کنید'
+    //                 }));
+
+    //                 $.each(result.data, function (index, city) {
+    //                     $('#city').append($('<option>', {
+    //                         value: city.id,
+    //                         text: city.name
+    //                     }));
+    //                 });
+    //             }
+
+    //             endLoading();
+
+    //         },
+    //         error: function () {
+    //             setToastAlert("دوباره تلاش  کنید", "danger")
+    //             endLoading();
+
+    //         }
+    //     });
+
+    // });
+
+
+    let fullname = ""
+    let state = 0
+    let city = 0
+    let birthday = ""
+    let gender = ""
+    let education = ""
+    let description = ""
+
+    $('form#requestForm').submit(function (e) {
+        e.preventDefault();
+
+        $formDiv = "form#requestForm";
+
+        fullname = $($formDiv + " input[name=fullname]").val();
+        // if (fullname == "") {
+        //     setToastAlert(" نام و نام خانوادگی را وارد کنید", "danger");
+        //     return;
+        // }
+
+        mobile = $($formDiv + " input[name=mobile]").val().trim();
+        if (mobile == "") {
+            setToastAlert("شماره تلفن را وارد کنید", "danger");
+            return;
+        }
+
+        const mobileRegex = /^(?:\+98|0)?9\d{9}$/;
+        if (!mobileRegex.test(mobile)) {
+            setToastAlert("شماره تلفن معتبر نیست", "danger");
+            return;
+        }
+
+        state = $($formDiv + " select[name=state]").val();
+        state = Number(state);
+
+        // if (!state) {
+        //     setToastAlert("استان خود را وارد کنید", "danger");
+        //     return;
+        // }
+
+        city = $($formDiv + " select[name=city]").val();
+        city = Number(city);
+
+        // if (!city) {
+        //     setToastAlert("شهر خود را وارد کنید", "danger");
+        //     return;
+        // }
+
+        birthday = $($formDiv + " input[name=birthday]").val();
+
+        if (birthday && birthday.trim() !== "") {
+            var pattern = /^\d{4}\/\d{2}\/\d{2}$/;
+
+            if (!pattern.test(birthday)) {
+                setToastAlert("فرمت تاریخ تولد باید به صورت 1405/01/03 باشد", "danger");
+                return;
+            }
+
+            var parts = birthday.split('/');
+            var year = parseInt(parts[0]);
+            var month = parseInt(parts[1]);
+            var day = parseInt(parts[2]);
+
+
+            if (year.length !== 4) {
+                setToastAlert("سال رو به درستی وارد کنید", "danger");
+                return;
+            }
+
+            if (month < 1 || month > 12) {
+                setToastAlert("ماه باید بین 01 تا 12 باشد", "danger");
+                return;
+            }
+
+            if (month < 1 || month > 12) {
+                setToastAlert("ماه باید بین 01 تا 12 باشد", "danger");
+                return;
+            }
+
+            if (day < 1 || day > 31) {
+                setToastAlert("روز باید بین 01 تا 31 باشد", "danger");
+                return;
+            }
+
+            var daysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+            if (day > daysInMonth[month - 1]) {
+                setToastAlert("روز وارد شده برای این ماه معتبر نیست", "danger");
+                return;
+            }
+        }
+
+        // if (birthday == "") {
+        //     setToastAlert("تاریخ تولد را وارد کنید", "danger");
+        //     return;
+        // }
+
+        gender = $($formDiv + " select[name=gender]").val();
+        // if (gender != "man" && gender != "woman") {
+        //     setToastAlert("جنسیت خود را وارد کنید", "danger");
+        //     return;
+        // }
+
+        education = $($formDiv + " select[name=education]").val();
+        // if (education != "yes" && education != "no") {
+        //     setToastAlert(" وضعیت آموزش نظامی خود را وارد کنید", "danger");
+        //     return;
+        // }
+
+        description = $($formDiv + " textarea[name=description]").val();
+        // if (description == "") {
+        //     setToastAlert(" توضیحات را وارد کنید", "danger");
+        //     return;
+        // }
+
+        const captcha = $($formDiv + " input[name=captcha]").val();
+        if (captcha == "") {
+            setToastAlert("کد  کد امنیتی را وارد کنید", "danger");
+            return;
+        }
+
+        checkForm();
+
+
+        //  this.submit();
+
+    });
+
+    $('form#verificationCodeForm').submit(function (e) {
+        e.preventDefault();
+
+        $formDiv = "form#verificationCodeForm";
+
+        const verificationCode = $($formDiv + " input[name=verificationCode]").val();
+        if (verificationCode == "") {
+            setToastAlert(" کد پیامک شده را وارد کنید", "danger");
+            return;
+        }
+
+
+        startLoading();
+
+        const data = {
+            action: 'verificationSms',
+            verificationCode: verificationCode,
+            mobile: mobile,
+            fullname: fullname,
+            state: state,
+            city: city,
+            birthday: birthday,
+            gender: gender,
+            education: education,
+            description: description,
+            formToken: formToken,
+        }
+        $.ajax({
+            url: extraJs.ajaxUrl,
+            method: 'POST',
+            data: data,
+            dataType: 'json',
+            success: function (result) {
+
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('verifySmsModal')).hide();
+                    setToastAlert(result.data, "success");
+
+                    setTimeout(function () {
+                        location.reload(true);
+                        return;
+                    }, 2000);
+
+                    createdFormToken();
+
+
+                } else {
+                    setToastAlert(result.data.message, "danger");
+                }
+
+                endLoading();
+
+            },
+            error: function () {
+                setToastAlert("دوباره تلاش کنید", "danger")
+                location.reload(true);
+                return;
+
+            }
+        });
+
+    });
+
+    $('body').on('hidden.bs.modal', '#verifySmsModal', function () {
+        createdFormToken();
+    });
+
+
+    $('#verificationCodeForm #verificationCode').keyup(function (e) {
+        e.preventDefault();
+        let verificationCode = $(this).val();
+
+        if (verificationCode.length >= extraJs.code_count) {
+            $('#verificationCodeForm #verifyCode').removeAttr('disabled');
+        } else {
+            $('#verificationCodeForm #verifyCode').attr('disabled', '');
+        }
+    });
+
+    $('#verificationCodeForm #verificationCode').change(function (e) {
+        e.preventDefault();
+        let verificationCode = $(this).val();
+
+        if (verificationCode.length >= extraJs.code_count) {
+            $('#verificationCodeForm #verifyCode').removeAttr('disabled');
+        } else {
+            $('#verificationCodeForm #verifyCode').attr('disabled', '');
+        }
+    });
+
+    $('#verificationCode').attr('maxlength', extraJs.code_count);
+
+
+});
+
+class HorizontalScroll {
+    constructor(container) {
+        this.container = container;
+        this.isDown = false;
+        this.startX;
+        this.scrollLeft;
+
+        this.init();
+    }
+
+    init() {
+        this.container.style.overflow = 'hidden';
+        this.container.style.cursor = 'grab';
+
+        this.container.addEventListener('mousedown', this.mouseDown.bind(this));
+        this.container.addEventListener('mouseleave', this.mouseLeave.bind(this));
+        this.container.addEventListener('mouseup', this.mouseUp.bind(this));
+        this.container.addEventListener('mousemove', this.mouseMove.bind(this));
+
+        this.container.addEventListener('touchstart', this.touchStart.bind(this));
+        this.container.addEventListener('touchend', this.touchEnd.bind(this));
+        this.container.addEventListener('touchmove', this.touchMove.bind(this));
+    }
+
+    mouseDown(e) {
+        this.isDown = true;
+        this.container.style.cursor = 'grabbing';
+        this.startX = e.pageX - this.container.offsetLeft;
+        this.scrollLeft = this.container.scrollLeft;
+    }
+
+    mouseLeave() {
+        this.isDown = false;
+        this.container.style.cursor = 'grab';
+    }
+
+    mouseUp() {
+        this.isDown = false;
+        this.container.style.cursor = 'grab';
+    }
+
+    mouseMove(e) {
+        if (!this.isDown) return;
+        e.preventDefault();
+        const x = e.pageX - this.container.offsetLeft;
+        const walk = (x - this.startX) * 2;
+        this.container.scrollLeft = this.scrollLeft - walk;
+    }
+
+    touchStart(e) {
+        this.isDown = true;
+        this.startX = e.touches[0].pageX - this.container.offsetLeft;
+        this.scrollLeft = this.container.scrollLeft;
+    }
+
+    touchEnd() {
+        this.isDown = false;
+    }
+
+    touchMove(e) {
+        if (!this.isDown) return;
+        const x = e.touches[0].pageX - this.container.offsetLeft;
+        const walk = (x - this.startX) * 2;
+        this.container.scrollLeft = this.scrollLeft - walk;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const scrollContainer = document.querySelector('.overflow-x-auto.scroll-container');
+    if (scrollContainer) {
+        new HorizontalScroll(scrollContainer);
+
+    }
+});

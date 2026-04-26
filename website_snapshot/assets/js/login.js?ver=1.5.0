@@ -1,0 +1,57 @@
+jQuery(document).ready(function ($) {
+
+    $loginForm = "form#loginForm";
+
+    $($loginForm).submit(function (e) {
+        e.preventDefault();
+
+        const username = $($loginForm + " input[name=username]").val();
+        if (username == "") {
+            setToastAlert("نام کاربری را وارد کنید", "danger");
+            return;
+        }
+
+        const password = $($loginForm + " input[name=password]").val();
+        if (password == "") {
+            setToastAlert("رمز عبور را وارد کنید", "danger");
+            return;
+        }
+
+
+        startLoading();
+
+        const data = {
+            action: 'adminLogin',
+            username: username,
+            password: password,
+        }
+
+        $.ajax({
+            url: extraJs.ajaxUrl,
+            method: 'POST',
+            data: data,
+            dataType: 'json',
+            success: function (result) {
+
+                if (result.success) {
+                    setToastAlert(result.data, "success");
+                    setTimeout(function () {
+                        location.reload(true);
+                    }, 1000);
+                } else {
+                    setToastAlert(result.data, "danger");
+                }
+
+                endLoading();
+
+            },
+            error: function () {
+                setToastAlert("دوباره تلاش  کنید", "danger")
+                endLoading();
+            }
+        });
+
+    });
+
+});
+
